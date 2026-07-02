@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOKEN_EXTRACTOR // SYSTEM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --panel-color: rgba(20, 20, 20, 0.8);
+            --primary-color: #00f3ff; /* 赛博蓝 */
+            --accent-color: #bc13fe;  /* 霓虹紫 */
+            --success-color: #0aff00; /* 黑客绿 */
+            --text-color: #e0e0e0;
+            --grid-line: rgba(0, 243, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            /* 优先使用科技英文字体 */
+            font-family: 'Share Tech Mono', 'Consolas', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 40px 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部导航栏 */
+        header {
+            height: 60px;
+            border-bottom: 1px solid var(--primary-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            z-index: 10;
+        }
+
+        .brand {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand span { font-size: 14px; opacity: 0.8; font-weight: normal; font-family: 'Share Tech Mono'; }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--success-color);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .blink {
+            width: 10px;
+            height: 10px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success-color);
+            animation: blink-animation 2s infinite;
+        }
+
+        /* 主体布局 */
+        main {
+            flex: 1;
+            display: flex;
+            padding: 40px;
+            gap: 40px;
+            position: relative;
+        }
+
+        /* 左侧操作区 */
+        .control-panel {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 800px;
+        }
+
+        /* 右侧终端日志区 */
+        .terminal-panel {
+            flex: 2;
+            background: #000;
+            border: 1px solid var(--accent-color);
+            border-radius: 4px;
+            padding: 20px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            overflow-y: auto;
+            box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
+            position: relative;
+            opacity: 0.9;
+        }
+        
+        .terminal-panel::before {
+            content: "SYSTEM_LOG // OUTPUT_STREAM";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--accent-color);
+            color: #000;
+            padding: 2px 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .log-entry { margin-bottom: 8px; line-height: 1.4; }
+        .log-time { color: #666; margin-right: 10px; }
+        .log-info { color: var(--primary-color); }
+        .log-success { color: var(--success-color); }
+        .log-error { color: #ff0055; }
+        .log-warn { color: #ffae00; }
+
+        /* 区块样式 */
+        section {
+            background: rgba(20, 20, 20, 0.6);
+            border-left: 4px solid var(--primary-color);
+            padding: 25px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        section:hover {
+            background: rgba(30, 30, 40, 0.8);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
+        }
+
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        h2::before {
+            content: '>>';
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        /* 输入框组件 */
+        .input-wrapper {
+            position: relative;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            transition: 0.3s;
+        }
+
+        .input-wrapper:focus-within {
+            border-bottom-color: var(--primary-color);
+            box-shadow: 0 5px 10px -5px rgba(0, 243, 255, 0.3);
+        }
+
+        input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--primary-color);
+            font-family: 'Share Tech Mono', 'Microsoft YaHei', monospace;
+            font-size: 16px;
+            padding: 10px 0;
+            outline: none;
+        }
+
+        input::placeholder { color: #444; font-family: 'Microsoft YaHei', sans-serif; font-style: italic;}
+
+        /* 按钮组件 */
+        .btn {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 25px;
+            /* 按钮字体用中文 */
+            font-family: 'Orbitron', 'Microsoft YaHei', sans-serif;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            white-space: nowrap;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--primary-color);
+            color: #000;
+            box-shadow: 0 0 20px var(--primary-color);
+        }
+
+        .btn:disabled {
+            border-color: #444;
+            color: #444;
+            cursor: not-allowed;
+        }
+
+        .btn-copy {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            font-size: 12px;
+            padding: 5px 15px;
+            margin-left: 10px;
+        }
+        
+        .btn-copy:hover {
+            background: var(--accent-color);
+            color: #fff;
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        /* 结果区域 */
+        .result-box {
+            margin-top: 30px;
+            border: 1px dashed var(--success-color);
+            padding: 20px;
+            background: rgba(10, 255, 0, 0.05);
+        }
+
+        /* 底部装饰 */
+        footer {
+            height: 30px;
+            background: #000;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 12px;
+            color: #555;
+            z-index: 10;
+        }
+
+        /* 动画 */
+        @keyframes blink-animation {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        /* 扫描线效果 overlay */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            main { flex-direction: column; padding: 20px; overflow-y: auto; }
+            .terminal-panel { min-height: 200px; }
+            body { overflow: auto; }
+            header { padding: 0 20px; }
+            .brand span { display: none; }
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+
+    <header>
+        <div class="brand">TOKEN_EXTRACTOR <span style="font-size:0.5em; opacity:0.7">v2.1</span></div>
+        <div class="status-indicator">
+            SYSTEM ONLINE <div class="blink"></div>
+        </div>
+    </header>
+
+    <main>
+        <div class="control-panel">
+            
+            <section id="step1">
+                <h2>STEP 01 // INITIALIZE_AUTH</h2>
+                <div style="display: flex; gap: 20px; align-items: flex-end;">
+                    <button id="genBtn" class="btn">生成授权链接</button>
+                    <div class="input-wrapper" style="flex: 1; display: none;" id="authUrlWrapper">
+                        <input type="text" id="authUrl" readonly value="">
+                        <button class="btn btn-copy" onclick="copy('authUrl', 'AUTH_URL')">复制</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="step2">
+                <h2>STEP 02 // INJECT_CALLBACK</h2>
+                <p style="color: #666; font-size: 12px; margin-bottom: 10px;">> WAITING FOR USER INPUT...</p>
+                <div class="input-wrapper">
+                    <input type="text" id="callbackUrl" placeholder="在此粘贴 http://localhost:1455/... 完整链接">
+                    <button class="btn btn-copy" onclick="clearInput()">清空</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button id="extractBtn" class="btn" style="width: 100%">提取 Token</button>
+                </div>
+            </section>
+
+            <section id="resultArea" class="hidden result-box">
+                <h2 style="color: var(--success-color)">>> OPERATION SUCCESSFUL</h2>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; color: var(--accent-color); font-weight: bold;">CLIENT_ID</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="clientId" readonly style="color: var(--accent-color);">
+                        <button class="btn btn-copy" onclick="copy('clientId', 'CLIENT_ID')">复制</button>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; color: var(--success-color); font-weight: bold;">REFRESH_TOKEN</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="refreshToken" readonly style="color: var(--success-color);">
+                        <button class="btn btn-copy" onclick="copy('refreshToken', 'REFRESH_TOKEN')">复制</button>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 12px; color: var(--primary-color); font-weight: bold;">ACCESS_TOKEN</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="accessToken" readonly style="color: var(--primary-color);">
+                        <button class="btn btn-copy" onclick="copy('accessToken', 'ACCESS_TOKEN')">复制</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="terminal-panel" id="terminal">
+            <div class="log-entry">
+                <span class="log-time">[SYSTEM]</span>
+                <span class="log-info">Interface initialized.</span>
+            </div>
+            <div class="log-entry">
+                <span class="log-time">[SYSTEM]</span>
+                <span class="log-info">Connected to server at port 3000.</span>
+            </div>
+            <div class="log-entry">
+                <span class="log-time">[SYSTEM]</span>
+                <span class="log-info">Waiting for user command...</span>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        ZEABUR_DEPLOYMENT // SECURE_CONNECTION // UNAUTHORIZED_ACCESS_PROHIBITED
+    </footer>
+
+    <script>
+        let sessionId = localStorage.getItem('oauth_session_id');
+        const DEFAULT_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
+
+        // 日志系统 (保持英文)
+        function log(msg, type = 'info') {
+            const terminal = document.getElementById('terminal');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            const time = new Date().toLocaleTimeString('en-US', {hour12: false});
+            let typeClass = 'log-info';
+            if (type === 'success') typeClass = 'log-success';
+            if (type === 'error') typeClass = 'log-error';
+            if (type === 'warn') typeClass = 'log-warn';
+
+            entry.innerHTML = `<span class="log-time">[${time}]</span><span class="${typeClass}">${msg}</span>`;
+            terminal.appendChild(entry);
+            terminal.scrollTop = terminal.scrollHeight; // Auto scroll
+        }
+
+        function copy(id, name) {
+            const el = document.getElementById(id);
+            el.select();
+            navigator.clipboard.writeText(el.value).then(() => {
+                log(`Clipboard updated: ${name} copied.`, 'success');
+            }).catch(err => {
+                log(`Clipboard error: ${err}`, 'error');
+            });
+        }
+
+        function clearInput() {
+            document.getElementById('callbackUrl').value = '';
+            log('Input field cleared.', 'warn');
+        }
+
+
+        async function parseApiResponse(res) {
+            const rawText = await res.text();
+            if (!rawText) return {};
+
+            try {
+                return JSON.parse(rawText);
+            } catch {
+                const snippet = rawText.slice(0, 180).replace(/\s+/g, ' ').trim();
+                throw new Error(`Server returned non-JSON response (HTTP ${res.status}): ${snippet}`);
+            }
+        }
+
+        // 自动检测回调
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('code')) {
+                document.getElementById('callbackUrl').value = window.location.href;
+                log('Callback detected automatically. Ready to extract.', 'success');
+                // 自动触发提取 (可选)
+                // document.getElementById('extractBtn').click();
+            }
+        };
+
+        // 生成链接
+        document.getElementById('genBtn').onclick = async () => {
+            const btn = document.getElementById('genBtn');
+            btn.disabled = true;
+            log('Initiating authentication sequence...', 'info');
+
+            try {
+                const res = await fetch('/api/generate-auth-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await parseApiResponse(res);
+                
+                if (data.success) {
+                    document.getElementById('authUrl').value = data.data.authUrl;
+                    document.getElementById('authUrlWrapper').style.display = 'flex';
+                    sessionId = data.data.sessionId;
+                    localStorage.setItem('oauth_session_id', sessionId);
+                    
+                    log('Session ID generated: ' + sessionId.substring(0, 8) + '...', 'info');
+                    log('Auth URL generated successfully.', 'success');
+                } else {
+                    log('Server error: ' + data.message, 'error');
+                }
+            } catch(e) { 
+                log('Network connection failed.', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        // 提取 Token
+        document.getElementById('extractBtn').onclick = async () => {
+            const urlStr = document.getElementById('callbackUrl').value.trim();
+            if (!urlStr) {
+                log('Error: Callback URL is empty.', 'error');
+                return;
+            }
+            
+            log('Parsing callback data...', 'info');
+            
+            try {
+                let code = '';
+                if (urlStr.includes('code=')) {
+                    try {
+                        const url = new URL(urlStr);
+                        code = url.searchParams.get('code');
+                    } catch {
+                        const match = urlStr.match(/code=([^&]*)/);
+                        if (match) code = match[1];
+                    }
+                } else {
+                    code = urlStr;
+                }
+
+                if(!code) {
+                    log('Error: Invalid auth code format.', 'error');
+                    return;
+                }
+
+                log('Exchanging code for token...', 'info');
+
+                const res = await fetch('/api/exchange-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, sessionId })
+                });
+                const data = await parseApiResponse(res);
+                
+                if (data.success) {
+                    document.getElementById('clientId').value = data.data.client_id || DEFAULT_CLIENT_ID;
+                    document.getElementById('refreshToken').value = data.data.refresh_token;
+                    // 新增 Access Token 赋值
+                    document.getElementById('accessToken').value = data.data.access_token || 'N/A';
+                    
+                    document.getElementById('resultArea').classList.remove('hidden');
+                    
+                    log('Token exchange successful.', 'success');
+                    log('Client ID ready (from OAuth app config).', 'success');
+                    log(`User Email: ${data.data.user_email || 'Unknown'}`, 'info');
+                    log('Refresh token secured.', 'success');
+                    log('Access token secured.', 'success');
+                } else {
+                    const extra = data?.error?.error_description || data?.error?.message || '';
+                    log('Exchange failed: ' + data.message + (extra ? ` | ${extra}` : ''), 'error');
+                    if (res.status === 429) {
+                        log('429 rate limit from OpenAI. Please retry later, or configure OPENAI_CLIENT_ID/OPENAI_PROXY.', 'warn');
+                    }
+                }
+            } catch(e) { 
+                log('Critical process error: ' + e.message, 'error');
+            }
+        };
+    </script>
+</body>
+</html>
